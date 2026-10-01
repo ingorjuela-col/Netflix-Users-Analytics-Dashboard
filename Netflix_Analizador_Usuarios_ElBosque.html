@@ -1,0 +1,2231 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Netflix Users Analytics | Universidad El Bosque · v11</title>
+
+<!--
+====================================================================
+LIBRERÍAS
+--------------------------------------------------------------------
+Plotly: construcción de gráficos interactivos.
+IMPORTANTE: la lectura de CSV/TSV se realiza con JavaScript nativo.
+Por tanto, copiar/pegar y cargar archivos NO depende de PapaParse.
+====================================================================
+-->
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+<style>
+
+/* ================================================================
+   INTERFAZ · REFERENCIA EL BOSQUE DIGITAL
+   Inspiración visual: portal institucional limpio, modular y claro.
+   No replica código ni estructura del sitio de referencia.
+   ================================================================ */
+:root{
+  --verde:#0B5D43;
+  --verde-oscuro:#084A36;
+  --verde-2:#2C7A61;
+  --verde-claro:#EAF4EF;
+  --verde-suave:#F4F8F5;
+  --naranja:#F28C28;
+  --naranja-claro:#FFF3E5;
+  --fondo:#F6F8F6;
+  --blanco:#FFFFFF;
+  --texto:#25312C;
+  --gris:#65716C;
+  --gris-claro:#8C9791;
+  --borde:#DDE6E1;
+  --verde-ok:#3D7C58;
+  --rojo:#A73B36;
+  --sombra:0 8px 28px rgba(22,52,40,.07);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  font-family:Inter,Segoe UI,Arial,sans-serif;
+  background:var(--fondo);
+  color:var(--texto);
+}
+button,input,textarea,select{font:inherit}
+
+/* ================= HEADER INSTITUCIONAL ======================= */
+.layout{display:block;min-height:100vh}
+.sidebar{
+  position:sticky;
+  top:0;
+  z-index:50;
+  width:100%;
+  background:#fff;
+  color:var(--texto);
+  border-bottom:1px solid var(--borde);
+  box-shadow:0 2px 14px rgba(20,55,40,.04);
+  padding:0 28px;
+  display:flex;
+  align-items:center;
+  gap:30px;
+}
+.brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-width:320px;
+  padding:14px 0;
+}
+.brand-symbol{
+  width:46px;height:46px;
+  border-radius:12px;
+  display:grid;
+  place-items:center;
+  background:var(--verde);
+  color:#fff;
+  font-weight:900;
+  letter-spacing:-.5px;
+  box-shadow:0 4px 12px rgba(11,93,67,.18);
+}
+.brand strong{display:block;font-size:14px;letter-spacing:.2px;color:var(--verde-oscuro)}
+.brand small{display:block;margin-top:3px;color:var(--gris);font-size:11px}
+.nav{
+  display:flex;
+  align-items:center;
+  gap:3px;
+  margin:0;
+  overflow:auto;
+}
+.nav button{
+  border:0;
+  background:transparent;
+  color:var(--gris);
+  text-align:left;
+  padding:13px 12px;
+  border-radius:8px;
+  white-space:nowrap;
+  cursor:pointer;
+}
+.nav button:hover{background:var(--verde-suave);color:var(--verde)}
+.nav button.active{
+  background:var(--verde-claro);
+  color:var(--verde-oscuro);
+  font-weight:800;
+}
+.sidebar-note{display:none}
+
+/* ========================= MAIN =============================== */
+.main{min-width:0}
+.topbar{
+  height:54px;
+  background:#F1F5F2;
+  border-bottom:1px solid var(--borde);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 32px;
+}
+.status{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  color:var(--gris);
+  font-size:12px;
+}
+.status-dot{width:8px;height:8px;border-radius:50%;background:#B4BBB0}
+.status-dot.ok{background:var(--verde-ok)}
+.status-dot.error{background:var(--rojo)}
+.container{width:min(1360px,calc(100% - 56px));margin:auto;padding:28px 0 70px}
+
+/* ========================= HERO =============================== */
+.hero{display:grid;grid-template-columns:1.7fr .8fr;gap:18px}
+.hero-main{
+  background:#fff;
+  color:var(--texto);
+  border:1px solid var(--borde);
+  border-radius:18px;
+  padding:34px;
+  min-height:240px;
+  position:relative;
+  overflow:hidden;
+  box-shadow:var(--sombra);
+}
+.hero-main:before{
+  content:"";
+  position:absolute;
+  left:0;top:0;bottom:0;
+  width:8px;
+  background:var(--naranja);
+}
+.hero-main:after{
+  content:"";
+  position:absolute;
+  width:320px;height:320px;
+  border:72px solid rgba(11,93,67,.055);
+  border-radius:50%;
+  right:-160px;bottom:-175px;
+}
+.eyebrow{color:var(--verde);font-weight:800;font-size:11px;letter-spacing:1.5px}
+h1{margin:12px 0;font-size:clamp(32px,4vw,50px);line-height:1;color:var(--verde-oscuro)}
+.hero-main p{max-width:720px;color:var(--gris);line-height:1.65;margin:0}
+.hero-stat{
+  background:var(--verde);
+  color:#fff;
+  border-radius:18px;
+  box-shadow:var(--sombra);
+  padding:28px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
+.hero-stat .eyebrow{color:#D8EFE5}
+.hero-stat .big{font-size:36px;font-weight:850;color:#fff;margin:5px 0}
+.hero-stat div[style*="color:var(--gris)"]{color:rgba(255,255,255,.72)!important}
+
+/* ========================= SECCIONES ========================== */
+.section{margin-top:30px;scroll-margin-top:88px}
+.section-title{display:flex;justify-content:space-between;align-items:end;gap:15px;margin-bottom:13px}
+.section-title h2{margin:0;color:var(--verde-oscuro);font-size:21px}
+.section-title p{margin:5px 0 0;color:var(--gris);font-size:13px}
+
+/* ========================= BOTONES ============================ */
+.btn{border:0;border-radius:8px;padding:10px 14px;font-weight:750;transition:.15s;cursor:pointer}
+.btn:hover{transform:translateY(-1px)}
+.btn-primary{background:var(--naranja);color:#fff}
+.btn-green{background:var(--verde);color:#fff}
+.btn-soft{background:var(--verde-claro);color:var(--verde-oscuro)}
+.btn-outline{background:#fff;border:1px solid var(--borde);color:var(--verde-oscuro)}
+.btn:disabled{opacity:.55;cursor:not-allowed;transform:none}
+
+/* ========================= IMPORTACIÓN ======================== */
+.import-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.import-card{background:#fff;border:1px solid var(--borde);border-radius:16px;padding:20px;box-shadow:var(--sombra)}
+.dropzone{min-height:220px;border:2px dashed #B9C9C0;border-radius:12px;display:grid;place-items:center;text-align:center;padding:25px;transition:.15s;background:#FBFDFC}
+.dropzone.drag{border-color:var(--naranja);background:var(--naranja-claro)}
+.upload-circle{width:50px;height:50px;border-radius:14px;background:var(--verde-claro);color:var(--verde);display:grid;place-items:center;margin:auto;font-size:22px;font-weight:800}
+.dropzone h3{margin:11px 0 6px;color:var(--verde-oscuro)}
+.dropzone p{margin:0 0 15px;color:var(--gris);font-size:13px}
+.field{margin-bottom:12px}
+.field label{display:block;color:var(--verde-oscuro);font-size:12px;font-weight:750;margin-bottom:6px}
+.field input,.field textarea,.field select{width:100%;border:1px solid var(--borde);border-radius:8px;padding:10px;background:#fff;color:var(--texto);outline:none}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--verde)}
+.field textarea{min-height:115px;resize:vertical}
+.button-row{display:flex;flex-wrap:wrap;gap:8px}
+
+/* ========================= MENSAJES =========================== */
+.message{display:none;margin-top:16px;padding:13px 15px;border-radius:10px;font-size:13px;line-height:1.5}
+.message.show{display:block}
+.message.info{background:var(--verde-claro);border-left:4px solid var(--verde)}
+.message.success{background:#E9F3E5;border-left:4px solid var(--verde-ok)}
+.message.error{background:#FBEAE8;border-left:4px solid var(--rojo)}
+
+/* ========================= KPI ================================ */
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+.kpi{background:#fff;border:1px solid var(--borde);border-radius:14px;padding:18px;position:relative;box-shadow:0 5px 20px rgba(24,53,42,.04)}
+.kpi:before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:4px;background:var(--naranja);border-radius:0 4px 4px 0}
+.kpi-label{color:var(--gris);font-size:10px;letter-spacing:.8px;text-transform:uppercase}
+.kpi-value{color:var(--verde-oscuro);font-size:27px;font-weight:850;margin-top:7px}
+
+/* ========================= PANELES ============================ */
+.panel{background:#fff;border:1px solid var(--borde);border-radius:16px;overflow:hidden;box-shadow:0 5px 20px rgba(24,53,42,.04)}
+.panel-head{padding:16px 18px;border-bottom:1px solid var(--borde);display:flex;justify-content:space-between;align-items:center}
+.panel-head strong{color:var(--verde-oscuro)}
+.panel-head small{color:var(--gris)}
+.panel-controls{padding:11px 17px;background:#F8FBF9;border-bottom:1px solid var(--borde);display:flex;flex-wrap:wrap;align-items:center;gap:9px}
+.panel-controls label{color:var(--gris);font-size:11px;display:flex;gap:6px;align-items:center}
+.panel-controls select{border:1px solid var(--borde);border-radius:7px;padding:6px;background:#fff}
+.chart{min-height:370px;padding:7px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.wide{grid-column:1/-1}
+
+/* ========================= CALIDAD ============================ */
+.quality-grid{display:grid;grid-template-columns:.8fr 1.2fr;gap:16px}
+.quality-list{padding:15px}
+.quality-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #EDF0EA;font-size:13px}
+.quality-row:last-child{border-bottom:0}
+.ok{color:var(--verde-ok);font-weight:700}
+.warning{color:#A86A16;font-weight:700}
+.preview{overflow:auto;max-height:380px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th,td{padding:9px 10px;border-bottom:1px solid #EDF0EA;text-align:left;white-space:nowrap}
+th{background:var(--verde);color:#fff;position:sticky;top:0}
+.empty{min-height:250px;display:grid;place-items:center;text-align:center;color:var(--gris);padding:30px}
+.empty strong{display:block;color:var(--verde-oscuro);margin-bottom:5px}
+
+/* ========================= FOOTER ============================ */
+.site-footer{margin-top:42px;padding:24px 0 8px;border-top:1px solid var(--borde);color:var(--gris);font-size:11px;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.site-footer strong{color:var(--verde-oscuro)}
+
+/* ========================= RESPONSIVE ======================== */
+@media(max-width:1050px){
+  .brand{min-width:250px}
+  .hero,.import-grid,.quality-grid{grid-template-columns:1fr}
+  .kpis{grid-template-columns:repeat(3,1fr)}
+  .two-col{grid-template-columns:1fr}
+  .wide{grid-column:auto}
+}
+@media(max-width:760px){
+  .sidebar{position:relative;display:block;padding:0 15px}
+  .brand{min-width:0;padding:12px 0}
+  .nav{padding:0 0 10px;overflow:auto}
+  .nav button{white-space:nowrap}
+  .topbar{padding:0 15px}
+  .container{width:calc(100% - 28px);padding-top:20px}
+  .kpis{grid-template-columns:1fr 1fr}
+  .site-footer{display:block}
+}
+@media(max-width:480px){
+  .kpis{grid-template-columns:1fr}
+  .hero-main,.hero-stat{padding:24px}
+}
+
+</style>
+</head>
+
+<body>
+<div class="layout">
+
+  <!-- ==========================================================
+       NAVEGACIÓN PRINCIPAL
+       ========================================================== -->
+  <header class="sidebar">
+    <div class="brand">
+      <div class="brand-symbol">UB</div>
+      <div>
+        <strong>UNIVERSIDAD EL BOSQUE</strong>
+        <small>El Bosque Digital · Analítica de datos</small>
+      </div>
+    </div>
+
+    <nav class="nav" aria-label="Navegación del analizador">
+      <button class="active" data-section="inicio">Inicio</button>
+      <button data-section="carga">Carga de datos</button>
+      <button data-section="suscripcion">Suscripción</button>
+      <button data-section="comportamiento">Comportamiento</button>
+      <button data-section="geografia">Geografía</button>
+      <button data-section="calidad">Calidad</button>
+    </nav>
+  </header>
+
+  <main class="main">
+
+    <header class="topbar">
+      <div class="status">
+        <span>El Bosque Digital</span>
+        <span>·</span>
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">Esperando datos</span>
+      </div>
+      <button class="btn btn-outline" id="btnPrint">Imprimir / PDF</button>
+    </header>
+
+    <div class="container">
+
+      <!-- ======================================================
+           PORTADA
+           ====================================================== -->
+      <section class="hero" id="inicio">
+        <div class="hero-main">
+          <div style="font-size:11px;color:var(--gris);margin-bottom:12px">El Bosque Digital  /  Analítica de datos</div>
+          <div class="eyebrow">ANALÍTICA EXPLORATORIA DE DATOS</div>
+          <h1>Netflix Users<br>Analytics</h1>
+          <p>
+            Dashboard para explorar suscripciones, comportamiento,
+            comportamiento de visualización y distribución geográfica.
+          </p>
+        </div>
+
+        <div class="hero-stat">
+          <div class="eyebrow">REGISTROS</div>
+          <div class="big" id="heroRows">0</div>
+          <div style="color:var(--gris);font-size:12px">filas procesadas</div>
+          <div style="height:18px"></div>
+          <div class="eyebrow">COLUMNAS</div>
+          <div class="big" id="heroCols">0</div>
+          <div style="color:var(--gris);font-size:12px">variables detectadas</div>
+        </div>
+      </section>
+
+      <div class="message" id="message"></div>
+
+      <!-- ======================================================
+           CARGA DE DATOS
+           ====================================================== -->
+      <section class="section" id="carga">
+        <div class="section-title">
+          <div>
+            <h2>Fuente de datos</h2>
+            <p>CSV, TSV, Excel copiado como texto, URL o datos de prueba.</p>
+          </div>
+          <button class="btn btn-primary" id="btnDemo">Cargar datos de prueba</button>
+        </div>
+
+        <div class="import-grid">
+
+          <article class="import-card">
+            <div class="dropzone" id="dropZone">
+              <div>
+                <div class="upload-circle">↑</div>
+                <h3>Arrastra tu archivo CSV</h3>
+                <p>También puedes seleccionarlo desde tu computador.</p>
+                <input type="file" id="fileInput" accept=".csv,.txt" hidden>
+                <button class="btn btn-green" id="btnFile">Seleccionar archivo</button>
+              </div>
+            </div>
+          </article>
+
+          <article class="import-card">
+            <div class="field">
+              <label for="pasteInput">Pegar datos</label>
+              <textarea id="pasteInput"
+                placeholder="Copia las filas desde Excel o pega un CSV aquí. No necesitas cambiar el formato."></textarea>
+            </div>
+
+            <div class="button-row">
+              <button class="btn btn-primary" id="btnPaste">Procesar datos pegados</button>
+              <button class="btn btn-soft" id="btnClearPaste">Limpiar</button>
+            </div>
+
+            <hr style="border:0;border-top:1px solid var(--borde);margin:18px 0">
+
+            <div class="field">
+              <label for="urlInput">URL directa de CSV</label>
+              <input id="urlInput" placeholder="https://.../archivo.csv">
+            </div>
+
+            <div class="button-row">
+              <button class="btn btn-outline" id="btnUrl">Cargar URL</button>
+              <button class="btn btn-soft" id="btnKaggle">Abrir Kaggle</button>
+            </div>
+
+            <p style="font-size:11px;color:var(--gris);line-height:1.5;margin-bottom:0">
+              El pegado detecta automáticamente coma, punto y coma y tabulaciones.
+            </p>
+          </article>
+
+        </div>
+      </section>
+
+      <!-- ======================================================
+           RESUMEN
+           ====================================================== -->
+      <section class="section">
+        <div class="section-title">
+          <div>
+            <h2>Resumen ejecutivo</h2>
+            <p>Indicadores calculados después de procesar la base.</p>
+          </div>
+        </div>
+
+        <div class="kpis">
+          <div class="kpi">
+            <div class="kpi-label">Usuarios</div>
+            <div class="kpi-value" id="kUsers">—</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Adultos</div>
+            <div class="kpi-value" id="kAdults">—</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Adulto mayor</div>
+            <div class="kpi-value" id="kOlderAdults">—</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Menor de edad</div>
+            <div class="kpi-value" id="kMinors">—</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Horas promedio</div>
+            <div class="kpi-value" id="kWatch">—</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Países</div>
+            <div class="kpi-value" id="kCountries">—</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================================================
+           01 SUSCRIPCIÓN
+           ====================================================== -->
+      <section class="section" id="suscripcion">
+        <div class="section-title">
+          <div>
+            <h2>01 · Suscripción</h2>
+            <p>Segmentación de usuarios por grupo etario y tipo de suscripción.</p>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <article class="panel">
+            <div class="panel-head">
+              <strong id="subscriptionMetricTitle">Distribución por grupo etario</strong>
+              <small id="subscriptionMetricHint">Variable derivada de Age</small>
+            </div>
+            <div class="chart" id="chartAgeGroup"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <strong>Distribución de usuarios</strong>
+              <small>Participación</small>
+            </div>
+            <div class="chart" id="chartSubscription"></div>
+          </article>
+        </div>
+      </section>
+
+      <!-- ======================================================
+           02 COMPORTAMIENTO
+           ====================================================== -->
+      <section class="section" id="comportamiento">
+        <div class="section-title">
+          <div>
+            <h2>02 · Comportamiento</h2>
+            <p>Relación entre edad, horas de visualización y género favorito.</p>
+          </div>
+        </div>
+
+        <article class="panel">
+          <div class="panel-head">
+            <strong>Edad vs. Watch Time Hours</strong>
+            <small id="behaviorCount">0 puntos</small>
+          </div>
+
+          <div class="panel-controls">
+            <label>
+              Género
+              <select id="genreFilter">
+                <option value="__ALL__">Todos</option>
+              </select>
+            </label>
+
+            <label>
+              Máximo de puntos
+              <select id="pointLimit">
+                <option value="300">300</option>
+                <option value="1000">1.000</option>
+                <option value="3000">3.000</option>
+                <option value="10000">10.000</option>
+              </select>
+            </label>
+
+            <button class="btn btn-soft" id="btnRefreshBehavior">Actualizar</button>
+          </div>
+
+          <div class="chart" id="chartBehavior"></div>
+        </article>
+      </section>
+
+      <!-- ======================================================
+           03 GEOGRAFÍA
+           ====================================================== -->
+      <section class="section" id="geografia">
+        <div class="section-title">
+          <div>
+            <h2>03 · Geografía</h2>
+            <p>Usuarios y horas promedio de visualización por país.</p>
+          </div>
+        </div>
+
+        <article class="panel">
+          <div class="panel-head">
+            <strong>Distribución geográfica</strong>
+            <small id="geoCaption">Top 15</small>
+          </div>
+
+          <div class="panel-controls">
+            <label>
+              Países
+              <select id="countryLimit">
+                <option value="10">Top 10</option>
+                <option value="15" selected>Top 15</option>
+                <option value="25">Top 25</option>
+                <option value="50">Top 50</option>
+              </select>
+            </label>
+
+            <button class="btn btn-soft" id="btnRefreshGeo">Actualizar</button>
+          </div>
+
+          <div class="chart" id="chartGeo"></div>
+        </article>
+      </section>
+
+      <!-- ======================================================
+           04 CALIDAD
+           ====================================================== -->
+      <section class="section" id="calidad">
+        <div class="section-title">
+          <div>
+            <h2>04 · Calidad de datos</h2>
+            <p>Columnas detectadas, valores faltantes y muestra de registros.</p>
+          </div>
+        </div>
+
+        <div class="quality-grid">
+
+          <article class="panel">
+            <div class="panel-head">
+              <strong>Validación de variables</strong>
+              <small id="sourceLabel">Sin datos</small>
+            </div>
+            <div class="quality-list" id="qualityList">
+              <div class="empty">
+                <div>
+                  <strong>Sin datos</strong>
+                  Carga una base para comenzar.
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <strong>Vista previa</strong>
+              <small>Primeras 12 filas</small>
+            </div>
+            <div class="preview" id="previewTable">
+              <div class="empty">
+                <div>
+                  <strong>Sin datos</strong>
+                  La vista previa aparecerá aquí.
+                </div>
+              </div>
+            </div>
+          </article>
+
+        </div>
+      </section>
+
+    </div>
+      <footer class="site-footer">
+        <div><strong>Universidad El Bosque</strong> · Analizador de datos local</div>
+        <div>Los archivos y datos cargados se procesan en este navegador.</div>
+      </footer>
+  </main>
+</div>
+
+<script>
+/*
+====================================================================
+ANALIZADOR NETFLIX USERS
+====================================================================
+
+ARQUITECTURA DEL CÓDIGO
+-----------------------
+1. Estado de la aplicación
+2. Referencias del DOM
+3. Mensajes y estado
+4. Utilidades
+5. Detección de columnas
+6. Conversión numérica
+7. Procesamiento de datos
+8. Indicadores
+9. Gráficos
+10. Calidad y vista previa
+11. Carga de archivos
+12. Pegado inteligente
+13. URL
+14. Datos de prueba
+15. Navegación
+16. Inicialización
+
+OBJETIVO DE ESTA VERSIÓN
+------------------------
+- No depender de un formato específico para pegar.
+- Detectar automáticamente , ; y tabulaciones.
+- Evitar errores silenciosos.
+- Mostrar siempre qué está ocurriendo.
+- Mantener separadas carga, procesamiento y visualización.
+====================================================================
+*/
+
+document.addEventListener("DOMContentLoaded", function(){
+
+  "use strict";
+
+  /* ==============================================================
+     1. ESTADO
+     ============================================================== */
+  const state = {
+    rows: [],
+    columns: [],
+    map: {},
+    source: "Sin datos"
+  };
+
+  /* ==============================================================
+     2. REFERENCIAS DOM
+     ============================================================== */
+  const $ = id => document.getElementById(id);
+
+  const messageBox = $("message");
+  const statusText = $("statusText");
+  const statusDot = $("statusDot");
+
+  /* ==============================================================
+     3. MENSAJES Y ESTADO
+     ============================================================== */
+
+  function showMessage(text,type="info"){
+    messageBox.textContent = text;
+    messageBox.className = "message show " + type;
+  }
+
+  function hideMessage(){
+    messageBox.className = "message";
+    messageBox.textContent = "";
+  }
+
+  function setStatus(text,type="normal"){
+    statusText.textContent = text;
+    statusDot.className = "status-dot";
+
+    if(type==="ok") statusDot.classList.add("ok");
+    if(type==="error") statusDot.classList.add("error");
+  }
+
+  /* ==============================================================
+     4. UTILIDADES
+     ============================================================== */
+
+  function normalize(value){
+    return String(value ?? "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g,"")
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g,"");
+  }
+
+  function escapeHtml(value){
+    return String(value ?? "")
+      .replace(/&/g,"&amp;")
+      .replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;");
+  }
+
+  function fmtNumber(value,decimals=0){
+    if(!Number.isFinite(value)) return "—";
+
+    return new Intl.NumberFormat("es-CO",{
+      maximumFractionDigits:decimals,
+      minimumFractionDigits:decimals
+    }).format(value);
+  }
+
+  function fmtMoney(value){
+    if(!Number.isFinite(value)) return "—";
+
+    return "$" + new Intl.NumberFormat("es-CO",{
+      maximumFractionDigits:2
+    }).format(value);
+  }
+
+  /*
+  ------------------------------------------------------------------
+  Conversión numérica.
+  Acepta:
+  19.99
+  19,99
+  $19.99
+  $ 19,99
+  1.234,56
+  1,234.56
+  ------------------------------------------------------------------
+  */
+  function toNumber(value){
+
+    if(value===null || value===undefined || value===""){
+      return NaN;
+    }
+
+    let text=String(value).trim();
+
+    text=text.replace(/[^\d,.\-]/g,"");
+
+    if(text.includes(",") && text.includes(".")){
+
+      if(text.lastIndexOf(",") > text.lastIndexOf(".")){
+        text=text.replace(/\./g,"").replace(",",".");
+      }else{
+        text=text.replace(/,/g,"");
+      }
+
+    }else if(text.includes(",")){
+
+      const parts=text.split(",");
+
+      if(parts[parts.length-1].length===2){
+        text=text.replace(",",".");
+      }else{
+        text=text.replace(/,/g,"");
+      }
+    }
+
+    return Number(text);
+  }
+
+  /* ==============================================================
+     5. DETECCIÓN DE COLUMNAS
+     ============================================================== */
+
+  const aliases={
+    userId:[
+      "userid","user","id","usuario","usuarioid"
+    ],
+    age:[
+      "age","edad"
+    ],
+    country:[
+      "country","pais","countryname"
+    ],
+    subscription:[
+      "subscriptiontype",
+      "subscription",
+      "suscripcion",
+      "suscripciontipo",
+      "plantype",
+      "membership"
+    ],
+    revenue:[
+      "monthlyrevenue",
+      "monthlyrevenueusd",
+      "revenue",
+      "monthlyfee",
+      "ingresomensual"
+    ],
+    watch:[
+      "watchtimehours",
+      "watchtime",
+      "watchhours",
+      "horasvisualizacion",
+      "watchtimehour"
+    ],
+    genre:[
+      "favoritegenre",
+      "genre",
+      "generofavorito"
+    ]
+  };
+
+  function detectColumns(columns){
+
+    const result={};
+
+    const normalizedColumns=columns.map(original=>({
+      original,
+      normalized:normalize(original)
+    }));
+
+    Object.entries(aliases).forEach(([key,candidates])=>{
+
+      const found=normalizedColumns.find(item=>
+        candidates.includes(item.normalized)
+      );
+
+      result[key]=found ? found.original : null;
+    });
+
+    return result;
+  }
+
+  /* ==============================================================
+     6. NORMALIZACIÓN DE FILAS
+     ============================================================== */
+
+  function cleanRows(rows){
+
+    return rows
+      .filter(row=>
+        row &&
+        Object.values(row).some(value=>
+          String(value ?? "").trim()!==""
+        )
+      )
+      .map(row=>{
+
+        const clean={};
+
+        state.columns.forEach(column=>{
+          clean[column]=String(row[column] ?? "").trim();
+        });
+
+        return clean;
+      });
+  }
+
+  /* ==============================================================
+     7.1 VARIABLE DERIVADA: GRUPO ETÁREO
+     ==============================================================
+
+     Reglas:
+       - Menor de Edad: menor de 18 años
+       - Adulto: desde 18 hasta 59 años
+       - Adulto Mayor: 60 años o más
+     ============================================================== */
+
+  function calculateAgeGroup(ageValue){
+
+    const age=toNumber(ageValue);
+
+    if(!Number.isFinite(age)) return "Sin dato";
+    if(age<18) return "Menor de Edad";
+    if(age<60) return "Adulto";
+    return "Adulto Mayor";
+  }
+
+  function addAgeGroupColumn(){
+
+    if(!state.map.age || !state.rows.length) return;
+
+    const ageColumn=state.map.age;
+    const derivedColumn="Grupo Etareo";
+
+    state.rows=state.rows.map(row=>({
+      ...row,
+      [derivedColumn]:calculateAgeGroup(row[ageColumn])
+    }));
+
+    if(!state.columns.includes(derivedColumn)){
+      state.columns.push(derivedColumn);
+    }
+  }
+
+  /* ==============================================================
+     7. PROCESAMIENTO CENTRAL
+     ============================================================== */
+
+  function processRows(rows,source){
+
+    try{
+
+      if(!Array.isArray(rows) || rows.length===0){
+        throw new Error("No se encontraron registros.");
+      }
+
+      /*
+      PapaParse puede devolver filas con columnas vacías.
+      Se limpian antes de continuar.
+      */
+      const firstValid=rows.find(row=>
+        row && Object.keys(row).length>0
+      );
+
+      if(!firstValid){
+        throw new Error("No se pudo identificar la estructura de la tabla.");
+      }
+
+      state.columns=Object.keys(firstValid);
+      state.rows=cleanRows(rows);
+      state.map=detectColumns(state.columns);
+      addAgeGroupColumn();
+      state.source=source;
+
+      if(!state.rows.length){
+        throw new Error("La tabla no contiene filas válidas.");
+      }
+
+      /*
+      Actualizamos primero la información básica.
+      Después generamos los gráficos.
+      */
+      updateSummary();
+      updateQuality();
+      updatePreview();
+      updateGenreOptions();
+
+      renderSubscription();
+      renderBehavior();
+      renderGeo();
+
+      $("sourceLabel").textContent=source;
+
+      setStatus(
+        `${fmtNumber(state.rows.length)} registros cargados`,
+        "ok"
+      );
+
+      showMessage(
+        `Datos procesados correctamente: ${fmtNumber(state.rows.length)} filas y ${fmtNumber(state.columns.length)} columnas.`,
+        "success"
+      );
+
+    }catch(error){
+
+      console.error(error);
+
+      state.rows=[];
+      state.columns=[];
+      state.map={};
+
+      setStatus("Error al procesar los datos","error");
+
+      showMessage(
+        "No fue posible procesar la información: "+error.message,
+        "error"
+      );
+    }
+  }
+
+  /* ==============================================================
+     8. RESUMEN / KPI
+     ============================================================== */
+
+  function updateSummary(){
+
+    const m=state.map;
+
+    const ids=m.userId
+      ? new Set(
+          state.rows
+            .map(row=>row[m.userId])
+            .filter(value=>String(value).trim()!=="")
+        )
+      : new Set();
+
+    const revenues=[];
+
+    const watch=m.watch
+      ? state.rows
+          .map(row=>toNumber(row[m.watch]))
+          .filter(Number.isFinite)
+      : [];
+
+    const countries=m.country
+      ? new Set(
+          state.rows
+            .map(row=>row[m.country])
+            .filter(value=>String(value).trim()!=="")
+        )
+      : new Set();
+
+    const userCount=ids.size || state.rows.length;
+
+    $("kUsers").textContent=fmtNumber(userCount);
+
+    const adults=state.rows.filter(row=>row["Grupo Etareo"]==="Adulto").length;
+    const olderAdults=state.rows.filter(row=>row["Grupo Etareo"]==="Adulto Mayor").length;
+    const minors=state.rows.filter(row=>row["Grupo Etareo"]==="Menor de Edad").length;
+
+    $("kAdults").textContent=fmtNumber(adults);
+    $("kOlderAdults").textContent=fmtNumber(olderAdults);
+    $("kMinors").textContent=fmtNumber(minors);
+
+    $("kWatch").textContent=
+      watch.length
+        ? fmtNumber(
+            watch.reduce((a,b)=>a+b,0)/watch.length,
+            1
+          )
+        : "—";
+
+    $("kCountries").textContent=
+      countries.size
+        ? fmtNumber(countries.size)
+        : "—";
+
+    $("heroRows").textContent=fmtNumber(state.rows.length);
+    $("heroCols").textContent=fmtNumber(state.columns.length);
+  }
+
+  /* ==============================================================
+     9. CONFIGURACIÓN GENERAL DE PLOTLY
+     ============================================================== */
+
+  const plotLayout={
+    margin:{l:55,r:30,t:20,b:55},
+    paper_bgcolor:"#FFFFFF",
+    plot_bgcolor:"#FFFFFF",
+    font:{
+      family:"Arial, sans-serif",
+      color:"#263029"
+    },
+    xaxis:{
+      gridcolor:"#EEF0EC",
+      zerolinecolor:"#D8DDD3"
+    },
+    yaxis:{
+      gridcolor:"#EEF0EC",
+      zerolinecolor:"#D8DDD3"
+    }
+  };
+
+  function plotAvailable(){
+
+    if(typeof Plotly==="undefined"){
+      showMessage(
+        "La librería de gráficos no pudo cargarse. Verifica tu conexión a Internet y vuelve a abrir el archivo.",
+        "error"
+      );
+      return false;
+    }
+
+    return true;
+  }
+
+  function renderEmpty(elementId,title,text){
+
+    $(elementId).innerHTML=`
+      <div class="empty">
+        <div>
+          <strong>${escapeHtml(title)}</strong>
+          ${escapeHtml(text)}
+        </div>
+      </div>`;
+  }
+
+  /* ==============================================================
+     10. GRÁFICO DE SUSCRIPCIONES
+     ============================================================== */
+
+  function renderSubscription(){
+
+    if(!plotAvailable()) return;
+
+    const m=state.map;
+
+    /* --------------------------------------------------------------
+       10.1 DISTRIBUCIÓN POR TIPO DE SUSCRIPCIÓN
+       -------------------------------------------------------------- */
+    if(!m.subscription){
+
+      renderEmpty(
+        "chartSubscription",
+        "Variable no detectada",
+        "Se necesita Subscription_Type."
+      );
+
+    }else{
+
+      const counts={};
+
+      state.rows.forEach(row=>{
+        const subscription=String(row[m.subscription] ?? "").trim();
+        if(subscription){
+          counts[subscription]=(counts[subscription]||0)+1;
+        }
+      });
+
+      const labels=Object.keys(counts);
+
+      if(!labels.length){
+
+        renderEmpty(
+          "chartSubscription",
+          "Sin datos de suscripción",
+          "No se encontraron valores en Subscription_Type."
+        );
+
+      }else{
+
+        Plotly.react(
+          "chartSubscription",
+          [{
+            labels,
+            values:labels.map(label=>counts[label]),
+            type:"pie",
+            hole:.48,
+            textinfo:"label+percent",
+            marker:{
+              colors:["#3E4729","#F5841F","#8D987A","#C8CEBF","#D8A06B"]
+            }
+          }],
+          {
+            ...plotLayout,
+            showlegend:true,
+            legend:{orientation:"h"}
+          },
+          {responsive:true,displaylogo:false}
+        );
+      }
+    }
+
+    /* --------------------------------------------------------------
+       10.2 DISTRIBUCIÓN POR GRUPO ETÁREO
+       --------------------------------------------------------------
+       Grupo_Etareo se deriva automáticamente de Age.
+       No requiere Monthly_Revenue.
+       -------------------------------------------------------------- */
+
+    const ageGroupColumn="Grupo Etareo";
+    const titleEl=$("subscriptionMetricTitle");
+    const hintEl=$("subscriptionMetricHint");
+
+    if(titleEl) titleEl.textContent="Distribución por grupo etario";
+    if(hintEl) hintEl.textContent="Grupo Etareo derivado de Age";
+
+    if(!state.columns.includes(ageGroupColumn)){
+      renderEmpty(
+        "chartAgeGroup",
+        "Variable no disponible",
+        "No se pudo generar Grupo_Etareo a partir de Age."
+      );
+      return;
+    }
+
+    const order=["Menor de Edad","Adulto","Adulto Mayor","Sin dato"];
+    const counts={};
+    order.forEach(label=>counts[label]=0);
+
+    state.rows.forEach(row=>{
+      const group=String(row[ageGroupColumn] ?? "Sin dato").trim() || "Sin dato";
+      if(!(group in counts)) counts[group]=0;
+      counts[group]++;
+    });
+
+    const labels=order.filter(label=>counts[label]>0);
+
+    if(!labels.length){
+      renderEmpty(
+        "chartAgeGroup",
+        "Sin datos",
+        "No se encontraron grupos etarios válidos."
+      );
+      return;
+    }
+
+    Plotly.react(
+      "chartAgeGroup",
+      [{
+        x:labels,
+        y:labels.map(label=>counts[label]),
+        type:"bar",
+        marker:{color:"#F5841F"},
+        hovertemplate:"%{x}<br>Usuarios: %{y}<extra></extra>"
+      }],
+      {
+        ...plotLayout,
+        yaxis:{...plotLayout.yaxis,title:"Usuarios"},
+        xaxis:{...plotLayout.xaxis,title:"Grupo etario"}
+      },
+      {responsive:true,displaylogo:false}
+    );
+  }
+
+  /* ==============================================================
+     11. GRÁFICO DE COMPORTAMIENTO
+     ============================================================== */
+
+  function updateGenreOptions(){
+
+    const select=$("genreFilter");
+    const m=state.map;
+
+    select.innerHTML=
+      '<option value="__ALL__">Todos</option>';
+
+    if(!m.genre) return;
+
+    const genres=[
+      ...new Set(
+        state.rows
+          .map(row=>String(row[m.genre] ?? "").trim())
+          .filter(Boolean)
+      )
+    ].sort();
+
+    genres.forEach(genre=>{
+      const option=document.createElement("option");
+      option.value=genre;
+      option.textContent=genre;
+      select.appendChild(option);
+    });
+  }
+
+  function renderBehavior(){
+
+    if(!plotAvailable()) return;
+
+    const m=state.map;
+
+    if(!m.age || !m.watch){
+
+      renderEmpty(
+        "chartBehavior",
+        "Variables no detectadas",
+        "Se necesitan Age y Watch_Time_Hours."
+      );
+
+      $("behaviorCount").textContent="0 puntos";
+      return;
+    }
+
+    const selectedGenre=$("genreFilter").value;
+    const limit=Number($("pointLimit").value)||300;
+
+    let rows=state.rows.filter(row=>{
+
+      if(selectedGenre==="__ALL__") return true;
+
+      return m.genre &&
+        String(row[m.genre] ?? "").trim()===selectedGenre;
+    });
+
+    rows=rows.slice(0,limit);
+
+    const groups={};
+    let validPoints=0;
+
+    rows.forEach(row=>{
+
+      const age=toNumber(row[m.age]);
+      const watch=toNumber(row[m.watch]);
+
+      const genre=m.genre
+        ? String(row[m.genre] ?? "").trim() || "Sin género"
+        : "Sin género";
+
+      if(!Number.isFinite(age)||!Number.isFinite(watch)){
+        return;
+      }
+
+      if(!groups[genre]){
+        groups[genre]={x:[],y:[]};
+      }
+
+      groups[genre].x.push(age);
+      groups[genre].y.push(watch);
+      validPoints++;
+    });
+
+    $("behaviorCount").textContent=
+      fmtNumber(validPoints)+" puntos";
+
+    const traces=Object.entries(groups).map(
+      ([genre,data])=>({
+        x:data.x,
+        y:data.y,
+        mode:"markers",
+        type:"scatter",
+        name:genre,
+        marker:{
+          size:8,
+          opacity:.65
+        },
+        hovertemplate:
+          "Edad: %{x}<br>Horas: %{y}<extra>"+
+          escapeHtml(genre)+
+          "</extra>"
+      })
+    );
+
+    if(!traces.length){
+
+      renderEmpty(
+        "chartBehavior",
+        "Sin datos numéricos",
+        "No hay valores válidos de edad y horas de visualización."
+      );
+
+      return;
+    }
+
+    Plotly.react(
+      "chartBehavior",
+      traces,
+      {
+        ...plotLayout,
+        showlegend:true,
+        legend:{orientation:"h"},
+        xaxis:{
+          ...plotLayout.xaxis,
+          title:"Edad"
+        },
+        yaxis:{
+          ...plotLayout.yaxis,
+          title:"Horas de visualización"
+        }
+      },
+      {responsive:true,displaylogo:false}
+    );
+  }
+
+  /* ==============================================================
+     12. GRÁFICO GEOGRÁFICO
+     ============================================================== */
+
+  function renderGeo(){
+
+    if(!plotAvailable()) return;
+
+    const m=state.map;
+
+    if(!m.country){
+
+      renderEmpty(
+        "chartGeo",
+        "Variable no detectada",
+        "Se necesita Country."
+      );
+
+      return;
+    }
+
+    const limit=Number($("countryLimit").value)||15;
+    const groups={};
+
+    state.rows.forEach(row=>{
+
+      const country=String(
+        row[m.country] ?? ""
+      ).trim();
+
+      if(!country) return;
+
+      if(!groups[country]){
+        groups[country]={
+          count:0,
+          watchSum:0,
+          watchCount:0
+        };
+      }
+
+      groups[country].count++;
+
+      if(m.watch){
+        const watch=toNumber(row[m.watch]);
+        if(Number.isFinite(watch)){
+          groups[country].watchSum+=watch;
+          groups[country].watchCount++;
+        }
+      }
+    });
+
+    const data=Object.entries(groups)
+      .sort((a,b)=>b[1].count-a[1].count)
+      .slice(0,limit);
+
+    $("geoCaption").textContent=
+      "Top "+limit;
+
+    Plotly.react(
+      "chartGeo",
+      [
+        {
+          x:data.map(item=>item[0]),
+          y:data.map(item=>item[1].count),
+          type:"bar",
+          name:"Usuarios",
+          marker:{color:"#3E4729"},
+          hovertemplate:
+            "%{x}<br>Usuarios: %{y}<extra></extra>"
+        },
+        {
+          x:data.map(item=>item[0]),
+          y:data.map(item=>item[1].watchCount ? item[1].watchSum/item[1].watchCount : 0),
+          type:"scatter",
+          mode:"lines+markers",
+          name:"Horas promedio",
+          yaxis:"y2",
+          marker:{color:"#F5841F"},
+          line:{color:"#F5841F"},
+          hovertemplate:
+            "%{x}<br>Horas promedio: %{y:.2f}<extra></extra>"
+        }
+      ],
+      {
+        ...plotLayout,
+        showlegend:true,
+        legend:{orientation:"h"},
+        xaxis:{
+          ...plotLayout.xaxis,
+          title:"País",
+          tickangle:-35
+        },
+        yaxis:{
+          ...plotLayout.yaxis,
+          title:"Usuarios"
+        },
+        yaxis2:{
+          title:"Horas promedio",
+          overlaying:"y",
+          side:"right",
+          gridcolor:"rgba(0,0,0,0)"
+        }
+      },
+      {responsive:true,displaylogo:false}
+    );
+  }
+
+  /* ==============================================================
+     13. CALIDAD
+     ============================================================== */
+
+  function updateQuality(){
+
+    const m=state.map;
+
+    const checks=[
+      ["User_ID",m.userId],
+      ["Age",m.age],
+      ["Country",m.country],
+      ["Subscription_Type",m.subscription],
+      ["Watch_Time_Hours",m.watch],
+      ["Favorite_Genre",m.genre],
+      ["Grupo Etareo",state.columns.includes("Grupo Etareo") ? "Grupo Etareo" : null],
+      ["Last_Login",null]
+    ];
+
+    let html="";
+
+    checks.forEach(([label,column])=>{
+
+      if(!column){
+
+        html+=`
+          <div class="quality-row">
+            <span>${escapeHtml(label)}</span>
+            <span class="warning">No detectada</span>
+          </div>`;
+
+        return;
+      }
+
+      const missing=state.rows.filter(row=>
+        String(row[column] ?? "").trim()===""
+      ).length;
+
+      html+=`
+        <div class="quality-row">
+          <span>${escapeHtml(label)}</span>
+          <span class="${missing ? "warning":"ok"}">
+            ${missing
+              ? fmtNumber(missing)+" faltantes"
+              : "OK"}
+          </span>
+        </div>`;
+    });
+
+    $("qualityList").innerHTML=html;
+  }
+
+  /* ==============================================================
+     14. VISTA PREVIA
+     ============================================================== */
+
+  function updatePreview(){
+
+    if(!state.rows.length){
+
+      $("previewTable").innerHTML=`
+        <div class="empty">
+          <div>
+            <strong>Sin datos</strong>
+            La vista previa aparecerá aquí.
+          </div>
+        </div>`;
+
+      return;
+    }
+
+    let html="<table><thead><tr>";
+
+    state.columns.forEach(column=>{
+      html+=`<th>${escapeHtml(column)}</th>`;
+    });
+
+    html+="</tr></thead><tbody>";
+
+    state.rows.slice(0,12).forEach(row=>{
+
+      html+="<tr>";
+
+      state.columns.forEach(column=>{
+        html+=`<td>${escapeHtml(row[column])}</td>`;
+      });
+
+      html+="</tr>";
+    });
+
+    html+="</tbody></table>";
+
+    $("previewTable").innerHTML=html;
+  }
+
+  /* ==============================================================
+     15. DETECCIÓN AUTOMÁTICA DEL SEPARADOR
+     ==============================================================
+
+     Esta función es la clave para copiar desde Excel.
+
+     Excel normalmente pega:
+       columna1[TAB]columna2[TAB]columna3
+
+     CSV puede usar:
+       ,
+       ;
+
+     Se intenta identificar el separador contando ocurrencias.
+     ============================================================== */
+
+  function detectDelimiter(text){
+
+    const sample=text
+      .split(/\r?\n/)
+      .filter(line=>line.trim()!=="")
+      .slice(0,10)
+      .join("\n");
+
+    const candidates=["\t",";",","];
+
+    let best="\t";
+    let bestScore=-1;
+
+    candidates.forEach(delimiter=>{
+
+      let score=0;
+
+      sample.split(/\r?\n/).forEach(line=>{
+
+        /*
+        Se cuentan ocurrencias, pero no se consideran separadores
+        que prácticamente no aparezcan.
+        */
+        score+=line.split(delimiter).length-1;
+      });
+
+      if(score>bestScore){
+        bestScore=score;
+        best=delimiter;
+      }
+    });
+
+    return best;
+  }
+
+  /* ==============================================================
+     16. PROCESAMIENTO DEL TEXTO PEGADO
+     ============================================================== */
+
+  /*
+  ------------------------------------------------------------------
+  PARSER CSV/TSV NATIVO
+  ------------------------------------------------------------------
+  Esta versión NO utiliza PapaParse.
+
+  Acepta:
+    - CSV separado por coma
+    - CSV separado por punto y coma
+    - TSV separado por tabulaciones
+    - Texto copiado directamente desde Excel
+
+  También respeta comas o punto y coma dentro de textos entre comillas.
+  ------------------------------------------------------------------
+  */
+
+  function detectDelimiter(text){
+
+    const lines=text
+      .split(/\r?\n/)
+      .filter(line=>line.trim()!=="")
+      .slice(0,10);
+
+    const candidates=["\t",";",","];
+
+    let best="\t";
+    let bestScore=-1;
+
+    candidates.forEach(delimiter=>{
+
+      let score=0;
+
+      lines.forEach(line=>{
+        let quoted=false;
+        let count=0;
+
+        for(let i=0;i<line.length;i++){
+
+          const char=line[i];
+
+          if(char==='"'){
+            if(quoted && line[i+1]==='"'){
+              i++;
+            }else{
+              quoted=!quoted;
+            }
+          }
+
+          if(char===delimiter && !quoted){
+            count++;
+          }
+        }
+
+        score+=count;
+      });
+
+      if(score>bestScore){
+        bestScore=score;
+        best=delimiter;
+      }
+    });
+
+    return best;
+  }
+
+  function parseDelimitedLine(line,delimiter){
+
+    const values=[];
+    let current="";
+    let quoted=false;
+
+    for(let i=0;i<line.length;i++){
+
+      const char=line[i];
+
+      if(char==='"'){
+
+        if(quoted && line[i+1]==='"'){
+          current+='"';
+          i++;
+          continue;
+        }
+
+        quoted=!quoted;
+        continue;
+      }
+
+      if(char===delimiter && !quoted){
+
+        values.push(current.trim());
+        current="";
+        continue;
+      }
+
+      current+=char;
+    }
+
+    values.push(current.trim());
+
+    return values;
+  }
+
+  function parseDelimitedText(text){
+
+    /*
+    --------------------------------------------------------------
+    SOPORTE PARA TABLAS MARKDOWN
+    --------------------------------------------------------------
+    Si el usuario copia una tabla como esta:
+
+      | User_ID | Name | Age |
+      |---------|------|-----|
+      | 1       | Ana  | 25  |
+
+    el separador real es "|" y existe una fila de guiones que NO
+    contiene datos. Esta función la convierte internamente a un
+    formato tabular normal antes de procesarla.
+    --------------------------------------------------------------
+    */
+
+    const rawLines=text
+      .replace(/^\uFEFF/,"")
+      .split(/\r?\n/)
+      .filter(line=>line.trim()!=="");
+
+    if(rawLines.length<2){
+      throw new Error(
+        "Se necesitan al menos una fila de encabezados y una fila de datos."
+      );
+    }
+
+    const looksLikeMarkdown = rawLines.some(line=>{
+      const t=line.trim();
+      return t.startsWith("|") && t.endsWith("|");
+    });
+
+    let lines=rawLines;
+    let delimiter=detectDelimiter(text);
+
+    if(looksLikeMarkdown){
+      delimiter="|";
+
+      lines=rawLines
+        .map(line=>{
+          let clean=line.trim();
+          if(clean.startsWith("|")) clean=clean.slice(1);
+          if(clean.endsWith("|")) clean=clean.slice(0,-1);
+          return clean;
+        })
+        .filter(line=>{
+          /* Elimina la fila Markdown de separación: |---|---| */
+          return !/^\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+$/.test(line);
+        });
+    }
+
+    const headers=parseDelimitedLine(lines[0],delimiter)
+      .map((header,index)=>{
+        let clean=header.trim();
+
+        /*
+        --------------------------------------------------------------
+        LIMPIEZA DE ENCABEZADOS MARKDOWN
+        --------------------------------------------------------------
+        Al copiar una tabla desde Markdown, los encabezados pueden
+        llegar así: **Subscription_Type**.
+        Quitamos únicamente los marcadores de énfasis para que la
+        detección de variables encuentre el nombre real de la columna.
+        --------------------------------------------------------------
+        */
+        clean=clean.replace(/^\*\*(.*?)\*\*$/,"$1");
+        clean=clean.replace(/^__(.*?)__$/,"$1");
+        clean=clean.replace(/^`(.*?)`$/,"$1");
+
+        return clean || `Columna_${index+1}`;
+      });
+
+    if(headers.length<2){
+      throw new Error(
+        "No se detectaron varias columnas. Verifica que hayas copiado los encabezados."
+      );
+    }
+
+    const rows=[];
+
+    for(let i=1;i<lines.length;i++){
+
+      const values=parseDelimitedLine(lines[i],delimiter);
+
+      const row={};
+
+      headers.forEach((header,index)=>{
+        row[header]=values[index] ?? "";
+      });
+
+      /*
+      Si una fila tiene más valores que encabezados, se agregan
+      columnas automáticamente para no perder información.
+      */
+      if(values.length>headers.length){
+
+        for(let j=headers.length;j<values.length;j++){
+
+          const extraHeader=`Columna_${j+1}`;
+
+          if(!headers.includes(extraHeader)){
+            headers.push(extraHeader);
+          }
+
+          row[extraHeader]=values[j] ?? "";
+        }
+      }
+
+      rows.push(row);
+    }
+
+    return {
+      rows,
+      delimiter,
+      delimiterName:
+        delimiter==="\t"
+          ? "TAB"
+          : delimiter
+    };
+  }
+
+  function processText(text,source){
+
+    if(!text || !text.trim()){
+
+      showMessage(
+        "No hay contenido para procesar. Copia primero las filas y pégalas en el cuadro.",
+        "error"
+      );
+
+      return;
+    }
+
+    try{
+
+      setStatus("Procesando datos pegados...");
+
+      const result=parseDelimitedText(text);
+
+      processRows(
+        result.rows,
+        `${source} · separador ${result.delimiterName}`
+      );
+
+    }catch(error){
+
+      console.error(error);
+
+      showMessage(
+        "No se pudo interpretar el contenido: "+error.message,
+        "error"
+      );
+
+      setStatus("Error al interpretar","error");
+    }
+  }
+
+  /* ==============================================================
+     17. ARCHIVO LOCAL
+     ============================================================== */
+
+  function readFile(file){
+
+    if(!file){
+
+      showMessage(
+        "Selecciona un archivo CSV o TXT.",
+        "error"
+      );
+
+      return;
+    }
+
+    setStatus("Leyendo "+file.name+"...");
+
+    const reader=new FileReader();
+
+    reader.onload=function(event){
+
+      try{
+
+        processText(
+          event.target.result,
+          file.name
+        );
+
+      }catch(error){
+
+        console.error(error);
+
+        showMessage(
+          "No fue posible leer el archivo: "+error.message,
+          "error"
+        );
+
+        setStatus("Error de lectura","error");
+      }
+    };
+
+    reader.onerror=function(){
+
+      showMessage(
+        "El navegador no pudo leer el archivo.",
+        "error"
+      );
+
+      setStatus("Error de lectura","error");
+    };
+
+    reader.readAsText(file,"UTF-8");
+  }
+
+  /* ==============================================================
+     18. URL DIRECTA
+     ============================================================== */
+
+  async function loadUrl(){
+
+    const url=$("urlInput").value.trim();
+
+    if(!url){
+
+      showMessage(
+        "Escribe una URL directa que apunte a un CSV.",
+        "error"
+      );
+
+      return;
+    }
+
+    try{
+
+      setStatus("Descargando CSV...");
+
+      const response=await fetch(url);
+
+      if(!response.ok){
+        throw new Error("HTTP "+response.status);
+      }
+
+      const text=await response.text();
+
+      processText(text,"URL");
+
+    }catch(error){
+
+      console.error(error);
+
+      showMessage(
+        "No se pudo cargar la URL. Puede existir una restricción CORS o la dirección no apunta directamente al CSV.",
+        "error"
+      );
+
+      setStatus("No se pudo cargar la URL","error");
+    }
+  }
+
+  /* ==============================================================
+     19. DATOS DE PRUEBA
+     ============================================================== */
+
+  function loadDemo(){
+
+    setStatus("Generando datos de prueba...");
+
+    /*
+    Los datos de prueba NO dependen de Internet ni de PapaParse.
+    Esto permite verificar que el motor interno funciona.
+    */
+
+    const countries=[
+      "Colombia","México","España","Argentina",
+      "Chile","Perú","Brasil","Estados Unidos",
+      "Canadá","Francia"
+    ];
+
+    const subscriptions=[
+      "Basic","Standard","Premium"
+    ];
+
+    const genres=[
+      "Drama","Comedy","Action",
+      "Documentary","Sci-Fi","Thriller"
+    ];
+
+    const rows=[];
+
+    for(let i=1;i<=420;i++){
+
+      const subscription=
+        subscriptions[
+          Math.floor(Math.random()*subscriptions.length)
+        ];
+
+      const country=
+        countries[
+          Math.floor(Math.random()*countries.length)
+        ];
+
+      const genre=
+        genres[
+          Math.floor(Math.random()*genres.length)
+        ];
+
+      const age=
+        Math.floor(18+Math.random()*55);
+
+      const watch=
+        Number(
+          (5+Math.random()*120).toFixed(1)
+        );
+
+      rows.push({
+        User_ID:"U"+String(i).padStart(4,"0"),
+        Age:age,
+        Country:country,
+        Subscription_Type:subscription,
+        Watch_Time_Hours:watch,
+        Favorite_Genre:genre
+      });
+    }
+
+    /*
+    Se llama directamente al mismo procesador que usan los
+    archivos reales. Así la prueba realmente valida el pipeline.
+    */
+    processRows(rows,"Datos de prueba");
+  }
+
+  /* ==============================================================
+     20. EVENTOS
+     ============================================================== */
+
+  /* Archivo */
+  $("btnFile").addEventListener(
+    "click",
+    ()=>$("fileInput").click()
+  );
+
+  $("fileInput").addEventListener(
+    "change",
+    event=>readFile(event.target.files[0])
+  );
+
+  /* Demo */
+  $("btnDemo").addEventListener(
+    "click",
+    loadDemo
+  );
+
+  /* Pegado */
+  $("btnPaste").addEventListener(
+    "click",
+    ()=>{
+      processText(
+        $("pasteInput").value,
+        "Datos pegados"
+      );
+    }
+  );
+
+  $("btnClearPaste").addEventListener(
+    "click",
+    ()=>{
+      $("pasteInput").value="";
+      showMessage(
+        "Área de pegado limpiada.",
+        "info"
+      );
+    }
+  );
+
+  /* URL */
+  $("btnUrl").addEventListener(
+    "click",
+    loadUrl
+  );
+
+  /* Kaggle */
+  $("btnKaggle").addEventListener(
+    "click",
+    ()=>{
+      window.open(
+        "https://www.kaggle.com/datasets/smayanj/netflix-users-database",
+        "_blank"
+      );
+
+      showMessage(
+        "Kaggle se abrió en una nueva pestaña. Descarga el CSV y luego usa 'Seleccionar archivo'.",
+        "info"
+      );
+    }
+  );
+
+  /* Imprimir */
+  $("btnPrint").addEventListener(
+    "click",
+    ()=>window.print()
+  );
+
+  /* Filtros */
+  $("genreFilter").addEventListener(
+    "change",
+    renderBehavior
+  );
+
+  $("pointLimit").addEventListener(
+    "change",
+    renderBehavior
+  );
+
+  $("btnRefreshBehavior").addEventListener(
+    "click",
+    renderBehavior
+  );
+
+  $("countryLimit").addEventListener(
+    "change",
+    renderGeo
+  );
+
+  $("btnRefreshGeo").addEventListener(
+    "click",
+    renderGeo
+  );
+
+  /* ==============================================================
+     21. DRAG & DROP
+     ============================================================== */
+
+  const dropZone=$("dropZone");
+
+  ["dragenter","dragover"].forEach(eventName=>{
+
+    dropZone.addEventListener(
+      eventName,
+      event=>{
+        event.preventDefault();
+        event.stopPropagation();
+        dropZone.classList.add("drag");
+      }
+    );
+  });
+
+  ["dragleave","drop"].forEach(eventName=>{
+
+    dropZone.addEventListener(
+      eventName,
+      event=>{
+        event.preventDefault();
+        event.stopPropagation();
+        dropZone.classList.remove("drag");
+      }
+    );
+  });
+
+  dropZone.addEventListener(
+    "drop",
+    event=>{
+      const file=event.dataTransfer.files[0];
+      readFile(file);
+    }
+  );
+
+  /* ==============================================================
+     22. NAVEGACIÓN
+     ============================================================== */
+
+  document.querySelectorAll(".nav button").forEach(button=>{
+
+    button.addEventListener(
+      "click",
+      ()=>{
+
+        const target=$(button.dataset.section);
+
+        if(target){
+          target.scrollIntoView({
+            behavior:"smooth",
+            block:"start"
+          });
+        }
+
+        document
+          .querySelectorAll(".nav button")
+          .forEach(item=>
+            item.classList.remove("active")
+          );
+
+        button.classList.add("active");
+      }
+    );
+  });
+
+  /* ==============================================================
+     23. ESTADO INICIAL
+     ============================================================== */
+
+  setStatus("Esperando datos");
+
+  renderEmpty(
+    "chartAgeGroup",
+    "Sin datos",
+    "Carga una base para generar el gráfico."
+  );
+
+  renderEmpty(
+    "chartSubscription",
+    "Sin datos",
+    "Carga una base para generar el gráfico."
+  );
+
+  renderEmpty(
+    "chartBehavior",
+    "Sin datos",
+    "Carga una base para generar el gráfico."
+  );
+
+  renderEmpty(
+    "chartGeo",
+    "Sin datos",
+    "Carga una base para generar el gráfico."
+  );
+
+});
+</script>
+</body>
+</html>
